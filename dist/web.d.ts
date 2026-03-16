@@ -5,7 +5,7 @@ declare const chatbot: {
         onRequest?: ((request: RequestInit) => Promise<void>) | undefined;
         chatflowConfig?: Record<string, unknown> | undefined;
         observersConfig?: import("./components/Bot").observersConfigType | undefined;
-        theme?: import("./features/bubble/types").BubbleTheme | undefined;
+        theme?: import(".").BubbleTheme | undefined;
     } & {
         id?: string | undefined;
     }) => void;
@@ -15,7 +15,7 @@ declare const chatbot: {
         onRequest?: ((request: RequestInit) => Promise<void>) | undefined;
         chatflowConfig?: Record<string, unknown> | undefined;
         observersConfig?: import("./components/Bot").observersConfigType | undefined;
-        theme?: import("./features/bubble/types").BubbleTheme | undefined;
+        theme?: import(".").BubbleTheme | undefined;
     }) => void;
     destroy: () => void;
 };
