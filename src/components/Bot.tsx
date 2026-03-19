@@ -1189,7 +1189,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
       chatId: chatId(),
     };
 
-    if (startInputType() === 'formInput') {
+    if (startInputType() === 'formInput' && Object.keys(formData).length > 0) {
       body.form = formData;
       delete body.question;
     }
