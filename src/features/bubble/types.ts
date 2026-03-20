@@ -28,6 +28,7 @@ export type TextInputTheme = {
   sendSoundLocation?: string;
   receiveMessageSound?: boolean;
   receiveSoundLocation?: string;
+  enableInputHistory?: boolean;
 };
 
 export type UserMessageTheme = {

@@ -1189,7 +1189,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
       chatId: chatId(),
     };
 
-    if (startInputType() === 'formInput') {
+    if (startInputType() === 'formInput' && Object.keys(formData).length > 0) {
       body.form = formData;
       delete body.question;
     }
@@ -2752,7 +2752,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                   handleFileChange={handleFileChange}
                   sendMessageSound={props.textInput?.sendMessageSound}
                   sendSoundLocation={props.textInput?.sendSoundLocation}
-                  enableInputHistory={true}
+                  enableInputHistory={props.textInput?.enableInputHistory ?? true}
                   maxHistorySize={10}
                   isLoading={loading()}
                   showAbortButton={loading() && hasAgentFlowExecutedData()}
