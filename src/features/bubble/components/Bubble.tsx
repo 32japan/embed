@@ -5,6 +5,7 @@ import { BubbleParams } from '../types';
 import { Bot, BotProps } from '../../../components/Bot';
 import Tooltip from './Tooltip';
 import { getBubbleButtonSize } from '@/utils';
+import DOMPurify from 'dompurify';
 
 const defaultButtonColor = '#3B81F6';
 const defaultIconColor = 'white';
@@ -13,6 +14,7 @@ export type BubbleProps = BotProps & BubbleParams;
 
 export const Bubble = (props: BubbleProps) => {
   const [bubbleProps] = splitProps(props, ['theme']);
+  const [bubbleContainerRef, setBubbleContainerRef] = createSignal<HTMLDivElement | undefined>(undefined);
 
   const [isBotOpened, setIsBotOpened] = createSignal(false);
   const [isBotStarted, setIsBotStarted] = createSignal(false);
@@ -82,8 +84,12 @@ export const Bubble = (props: BubbleProps) => {
         autoOpenOnMobile={bubbleProps.theme?.button?.autoWindowOpen?.autoOpenOnMobile ?? false}
       />
       <div
+        ref={(el) => setBubbleContainerRef(el)}
         part="bot"
         style={{
+          display: 'flex',
+          'flex-direction': 'column',
+          overflow: 'hidden',
           height: bubbleProps.theme?.chatWindow?.height ? `${bubbleProps.theme?.chatWindow?.height.toString()}px` : 'calc(100% - 150px)',
           width: bubbleProps.theme?.chatWindow?.width ? `${bubbleProps.theme?.chatWindow?.width.toString()}px` : undefined,
           transition: 'transform 200ms cubic-bezier(0, 1.2, 1, 1), opacity 150ms ease-out',
@@ -106,7 +112,10 @@ export const Bubble = (props: BubbleProps) => {
         }
       >
         <Show when={isBotStarted()}>
-          <div class="relative h-full">
+          <Show when={bubbleProps.theme?.chatWindow?.headerHtml}>
+            <div innerHTML={DOMPurify.sanitize(bubbleProps.theme?.chatWindow?.headerHtml ?? '')} />
+          </Show>
+          <div class="relative flex-1 min-h-0">
             <Show when={isBotOpened()}>
               {/* Cross button For only mobile screen use this <Show when={isBotOpened() && window.innerWidth <= 640}>  */}
               <button
@@ -156,7 +165,9 @@ export const Bubble = (props: BubbleProps) => {
               disclaimer={bubbleProps.theme?.disclaimer}
               dateTimeToggle={bubbleProps.theme?.chatWindow?.dateTimeToggle}
               renderHTML={props.theme?.chatWindow?.renderHTML}
+              hasCustomHeader={!!bubbleProps.theme?.chatWindow?.headerHtml}
               closeBot={closeBot}
+              dialogContainer={bubbleContainerRef()}
             />
           </div>
         </Show>

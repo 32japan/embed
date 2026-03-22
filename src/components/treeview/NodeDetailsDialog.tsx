@@ -1,4 +1,5 @@
 import { createSignal, Show, For, JSXElement } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import { Marked } from '@ts-stack/markdown';
 import DOMPurify from 'dompurify';
 import { getAgentflowIcon } from './AgentflowIcons';
@@ -18,6 +19,9 @@ type NodeDetailsDialogProps = {
   apiHost?: string;
   chatflowid?: string;
   chatId?: string;
+  // When opened in Bubble chat and there is a header we want to portal the modal outside so it covers the header
+  dialogContainer?: HTMLElement;
+  hasCustomHeader?: boolean;
 };
 
 const FLOWISE_CREDENTIAL_ID = 'FLOWISE_CREDENTIAL_ID';
@@ -594,7 +598,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
 
         {/* Tool role: show tool name and tool_call_id */}
         <Show when={role === 'tool' && msg.name}>
-          <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', 'margin-top': '4px' }}>
+          <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', 'margin-top': '4px', 'flex-wrap': 'wrap' }}>
             <ToolIcon />
             <span style={{ 'font-size': '0.85rem' }}>{msg.name}</span>
             <Show when={msg.tool_call_id}>{roleBadge('#F5F5F5', '#616161', msg.tool_call_id)}</Show>
@@ -967,8 +971,13 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
     .ndd-markdown strong { font-weight: 600; }
   `;
 
-  return (
-    <Show when={props.isOpen && props.node}>
+  // In bubble mode with a custom header, the modal should cover the popup including the
+  // chat header — some padding offset is needed. In all other cases (full page or bubble
+  // without a custom header) we offset by CHAT_HEADER_HEIGHT to clear the chat title bar.
+  const dialogPaddingTop = () => (props.dialogContainer && props.hasCustomHeader ? 50 : CHAT_HEADER_HEIGHT);
+
+  const DialogContent = () => (
+    <>
       <style>{dialogStyles}</style>
       <div
         class="node-details-dialog-root"
@@ -982,7 +991,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
           'overflow-x': 'hidden',
           'overflow-y': 'auto',
           outline: 'none',
-          'padding-top': `${CHAT_HEADER_HEIGHT}px`,
+          'padding-top': `${dialogPaddingTop()}px`,
         }}
         onClick={() => props.onClose()}
       >
@@ -999,7 +1008,7 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
             'box-shadow': '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
             display: 'flex',
             'flex-direction': 'column',
-            'max-height': `calc(100% - ${CHAT_HEADER_HEIGHT}px)`,
+            'max-height': `calc(100% - ${dialogPaddingTop()}px)`,
             'overflow-y': 'auto',
             outline: 'none',
           }}
@@ -1218,7 +1227,10 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
         </div>
         <div
           style={{ position: 'fixed', inset: '0', 'z-index': 1003, 'background-color': 'rgba(0,0,0,0.35)' }}
-          onClick={() => setToolDetailData(null)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setToolDetailData(null);
+          }}
         />
       </Show>
 
@@ -1226,6 +1238,18 @@ export const NodeDetailsDialog = (props: NodeDetailsDialogProps) => {
         style={{ position: 'fixed', inset: '0', 'z-index': 1001, 'background-color': 'rgba(0,0,0,0.25)', 'pointer-events': 'auto' }}
         onClick={() => props.onClose()}
       />
+    </>
+  );
+
+  return (
+    <Show when={props.isOpen && props.node}>
+      <Show when={props.dialogContainer} fallback={<DialogContent />}>
+        {(container) => (
+          <Portal mount={container()}>
+            <DialogContent />
+          </Portal>
+        )}
+      </Show>
     </Show>
   );
 };

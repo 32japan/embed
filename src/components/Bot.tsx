@@ -185,6 +185,8 @@ export type BotProps = {
   dateTimeToggle?: DateTimeToggleTheme;
   renderHTML?: boolean;
   closeBot?: () => void;
+  hasCustomHeader?: boolean;
+  dialogContainer?: HTMLElement;
 };
 
 export type LeadsConfig = {
@@ -2520,8 +2522,8 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
               style={{
                 background: props.titleBackgroundColor || props.bubbleBackgroundColor || defaultTitleBackgroundColor,
                 color: props.titleTextColor || props.bubbleTextColor || defaultBackgroundColor,
-                'border-top-left-radius': props.isFullPage ? '0px' : '6px',
-                'border-top-right-radius': props.isFullPage ? '0px' : '6px',
+                'border-top-left-radius': props.isFullPage || props.hasCustomHeader ? '0px' : '6px',
+                'border-top-right-radius': props.isFullPage || props.hasCustomHeader ? '0px' : '6px',
               }}
             >
               <Show when={props.titleAvatarSrc}>
@@ -2545,7 +2547,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
               </DeleteButton>
             </div>
           ) : null}
-          <div class="relative flex flex-col w-full h-full justify-start z-0">
+          <div class="relative flex flex-col w-full flex-1 min-h-0 justify-start z-0">
             <div
               ref={chatContainer}
               class="overflow-y-scroll flex flex-col flex-grow min-w-full w-full px-3 pt-[70px] relative scrollable-container chatbot-chat-view"
@@ -2597,6 +2599,8 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                           isTTSPlaying={isTTSPlaying()}
                           handleTTSClick={handleTTSClick}
                           handleTTSStop={handleTTSStop}
+                          hasCustomHeader={props.hasCustomHeader}
+                          dialogContainer={props.dialogContainer}
                         />
                       )}
                       {message.type === 'leadCaptureMessage' && leadsConfig()?.status && !getLocalStorageChatflow(props.chatflowid)?.lead && (
