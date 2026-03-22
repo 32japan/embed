@@ -82,15 +82,32 @@ To enable full screen, add `margin: 0` to <code>body</code> style. The default h
 
 `height` and `width` accept a **number** (pixels) or a **CSS string**:
 
-| Value | Behaviour |
-|---|---|
-| `height: 700` | Fixed 700px, automatically shrinks on smaller screens |
-| `height: '700px'` | Same as above via string |
-| `height: '80dvh'` | Responsive — 80% of viewport height on all screen sizes |
-| `height: 'min(700px, 80dvh)'` | Caps at 700px on large screens, shrinks proportionally on small screens |
-| `height: '100%'` | Relative to the `<flowise-fullchatbot>` host element — only works if the host has an explicit height set (e.g. via CSS). Use `'100dvh'` or omit `height` for full-viewport behaviour instead. |
+| Value                         | Behaviour                                                                                                                                                                                     |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `height: 700`                 | Fixed 700px, automatically shrinks on smaller screens                                                                                                                                         |
+| `height: '700px'`             | Same as above via string                                                                                                                                                                      |
+| `height: '80dvh'`             | Responsive — 80% of viewport height on all screen sizes                                                                                                                                       |
+| `height: 'min(700px, 80dvh)'` | Caps at 700px on large screens, shrinks proportionally on small screens                                                                                                                       |
+| `height: '100%'`              | Relative to the `<flowise-fullchatbot>` host element — only works if the host has an explicit height set (e.g. via CSS). Use `'100dvh'` or omit `height` for full-viewport behaviour instead. |
 
 The same options apply to `width`.
+
+### Clear Chat
+
+```html
+<script type="module">
+  import Chatbot from 'https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js';
+  Chatbot.initFull({
+    chatflowid: '<chatflowid>',
+    apiHost: 'http://localhost:3000',
+    id: 'my-chatbot',
+  });
+</script>
+
+<!-- Call clearChat after the bot has mounted, e.g. from a button -->
+<button onclick="Chatbot.clearChat()">Clear All Chats</button>
+<button onclick="Chatbot.clearChat('my-chatbot')">Clear Specific Chat</button>
+```
 
 ## Configuration
 
