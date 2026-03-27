@@ -25,6 +25,8 @@ type WorkflowTreeViewProps = {
   apiHost?: string;
   chatflowid?: string;
   chatId?: string;
+  hasCustomHeader?: boolean;
+  dialogContainer?: HTMLElement;
 };
 
 // Default styling values consistent with BotBubble
@@ -594,6 +596,8 @@ export const WorkflowTreeView = (props: WorkflowTreeViewProps) => {
         apiHost={props.apiHost}
         chatflowid={props.chatflowid}
         chatId={props.chatId}
+        hasCustomHeader={props.hasCustomHeader}
+        dialogContainer={props.dialogContainer}
       />
     </div>
   );

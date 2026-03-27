@@ -41,6 +41,8 @@ type Props = {
   isTTSPlaying?: Record<string, boolean>;
   handleTTSClick?: (messageId: string, messageText: string) => void;
   handleTTSStop?: (messageId: string) => void;
+  hasCustomHeader?: boolean;
+  dialogContainer?: HTMLElement;
 };
 
 const defaultBackgroundColor = '#f7f8ff';
@@ -415,6 +417,8 @@ export const BotBubble = (props: Props) => {
                   apiHost={props.apiHost}
                   chatflowid={props.chatflowid}
                   chatId={props.chatId}
+                  hasCustomHeader={props.hasCustomHeader}
+                  dialogContainer={props.dialogContainer}
                 />
               </div>
             )}

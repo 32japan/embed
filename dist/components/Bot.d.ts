@@ -121,6 +121,8 @@ export type BotProps = {
     dateTimeToggle?: DateTimeToggleTheme;
     renderHTML?: boolean;
     closeBot?: () => void;
+    hasCustomHeader?: boolean;
+    dialogContainer?: HTMLElement;
 };
 export type LeadsConfig = {
     status: boolean;

@@ -12,6 +12,8 @@ type NodeDetailsDialogProps = {
     apiHost?: string;
     chatflowid?: string;
     chatId?: string;
+    dialogContainer?: HTMLElement;
+    hasCustomHeader?: boolean;
 };
 export declare const NodeDetailsDialog: (props: NodeDetailsDialogProps) => import("solid-js").JSX.Element;
 export {};
