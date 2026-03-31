@@ -47,10 +47,15 @@ export const destroy = () => {
   elementUsed?.remove();
 };
 
+export const clearChat = (id?: string) => {
+  document.dispatchEvent(new CustomEvent('flowise-clear-chat', id ? { detail: { id } } : undefined));
+};
+
 type Chatbot = {
   initFull: typeof initFull;
   init: typeof init;
   destroy: typeof destroy;
+  clearChat: typeof clearChat;
 };
 
 declare const window:
@@ -63,6 +68,7 @@ export const parseChatbot = () => ({
   initFull,
   init,
   destroy,
+  clearChat,
 });
 
 export const injectChatbotInWindow = (bot: Chatbot) => {

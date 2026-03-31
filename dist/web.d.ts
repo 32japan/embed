@@ -20,6 +20,7 @@ declare const chatbot: {
         theme?: import(".").BubbleTheme | undefined;
     }) => void;
     destroy: () => void;
+    clearChat: (id?: string | undefined) => void;
 };
 export default chatbot;
 //# sourceMappingURL=web.d.ts.map

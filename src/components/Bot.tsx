@@ -594,6 +594,19 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     chatContainer?.addEventListener('scroll', handleScroll, { passive: true });
     onCleanup(() => chatContainer?.removeEventListener('scroll', handleScroll));
 
+    const handleExternalClearChat = async (e: Event) => {
+      const targetId = (e as CustomEvent).detail?.id;
+      if (targetId) {
+        const root = chatContainer?.getRootNode();
+        const hostEl = root instanceof ShadowRoot ? root.host : chatContainer?.closest(`#${CSS.escape(targetId)}`);
+        if (!hostEl || hostEl.id !== targetId) return;
+      }
+      if (loading()) await handleAbort();
+      clearChat();
+    };
+    document.addEventListener('flowise-clear-chat', handleExternalClearChat);
+    onCleanup(() => document.removeEventListener('flowise-clear-chat', handleExternalClearChat));
+
     // Expose programmatic scroll guard to outer scope
     let guardTimeout: ReturnType<typeof setTimeout> | null = null;
     programmaticScrollGuard = (fn: () => void) => {
@@ -1365,8 +1378,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
       setMessages(messages);
       setShowScrollButton(false);
     } catch (error: any) {
-      const errorData = error.response.data || `${error.response.status}: ${error.response.statusText}`;
-      console.error(`error: ${errorData}`);
+      console.error('clearChat failed:', error);
     }
   };
 
@@ -1374,9 +1386,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     if (props.clearChatOnReload) {
       clearChat();
       window.addEventListener('beforeunload', clearChat);
-      return () => {
-        window.removeEventListener('beforeunload', clearChat);
-      };
+      onCleanup(() => window.removeEventListener('beforeunload', clearChat));
     }
   });
 
