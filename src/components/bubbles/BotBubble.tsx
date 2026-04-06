@@ -1,6 +1,7 @@
 import { createEffect, Show, createSignal, onMount, For } from 'solid-js';
 import { Avatar } from '../avatars/Avatar';
 import { Marked } from '@ts-stack/markdown';
+import DOMPurify from 'dompurify';
 import { FeedbackRatingType, sendFeedbackQuery, sendFileDownloadQuery, updateFeedbackQuery } from '@/queries/sendMessageQuery';
 import { FileUpload, IAction, MessageType } from '../Bot';
 import { CopyToClipboardButton, ThumbsDownButton, ThumbsUpButton } from '../buttons/FeedbackButtons';
@@ -11,6 +12,7 @@ import { TickIcon, XIcon } from '../icons';
 import { SourceBubble } from '../bubbles/SourceBubble';
 import { DateTimeToggleTheme } from '@/features/bubble/types';
 import { WorkflowTreeView } from '../treeview/WorkflowTreeView';
+import { ThinkingCard } from './ThinkingBubble';
 
 type Props = {
   message: MessageType;
@@ -39,6 +41,8 @@ type Props = {
   isTTSPlaying?: Record<string, boolean>;
   handleTTSClick?: (messageId: string, messageText: string) => void;
   handleTTSStop?: (messageId: string) => void;
+  hasCustomHeader?: boolean;
+  dialogContainer?: HTMLElement;
 };
 
 const defaultBackgroundColor = '#f7f8ff';
@@ -332,7 +336,7 @@ export const BotBubble = (props: Props) => {
         </Show>
         <Show when={item.type === 'html'}>
           <div class="mt-2">
-            <div innerHTML={item.data as string} />
+            <div innerHTML={DOMPurify.sanitize(item.data as string)} />
           </div>
         </Show>
         <Show when={item.type !== 'png' && item.type !== 'jpeg' && item.type !== 'html'}>
@@ -407,7 +411,15 @@ export const BotBubble = (props: Props) => {
             Array.isArray(props.message.agentFlowExecutedData) &&
             props.message.agentFlowExecutedData.length > 0 && (
               <div>
-                <WorkflowTreeView workflowData={props.message.agentFlowExecutedData} indentationLevel={24} />
+                <WorkflowTreeView
+                  workflowData={props.message.agentFlowExecutedData}
+                  indentationLevel={24}
+                  apiHost={props.apiHost}
+                  chatflowid={props.chatflowid}
+                  chatId={props.chatId}
+                  hasCustomHeader={props.hasCustomHeader}
+                  dialogContainer={props.dialogContainer}
+                />
               </div>
             )}
           {props.showAgentMessages && props.message.agentReasoning && (
@@ -446,6 +458,17 @@ export const BotBubble = (props: Props) => {
                   return item !== null ? <>{renderArtifacts(item)}</> : null;
                 }}
               </For>
+            </div>
+          )}
+          {props.message.thinking && (
+            <div class="ml-2 mb-1 max-w-full">
+              <ThinkingCard
+                thinking={props.message.thinking}
+                thinkingDuration={props.message.thinkingDuration}
+                isThinking={props.message.isThinking}
+                backgroundColor={props.backgroundColor ?? defaultBackgroundColor}
+                textColor={props.textColor ?? defaultTextColor}
+              />
             </div>
           )}
           {props.message.message && (
@@ -510,7 +533,7 @@ export const BotBubble = (props: Props) => {
                   const URL = isValidURL(src.metadata.source);
                   return (
                     <SourceBubble
-                      pageContent={URL ? URL.pathname : src.pageContent}
+                      pageContent={src.metadata.title ? src.metadata.title : URL ? URL.pathname : src.pageContent}
                       metadata={src.metadata}
                       onSourceClick={() => {
                         if (URL) {

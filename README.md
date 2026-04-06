@@ -64,7 +64,7 @@ yarn build
 <flowise-fullchatbot></flowise-fullchatbot>
 ```
 
-To enable full screen, add `margin: 0` to <code>body</code> style, and confirm you don't set height and width
+To enable full screen, add `margin: 0` to <code>body</code> style. The default height is `100dvh` (full viewport height), so omitting `height` is recommended for true full-screen mode.
 
 ```html
 <body style="margin: 0">
@@ -73,15 +73,40 @@ To enable full screen, add `margin: 0` to <code>body</code> style, and confirm y
     Chatbot.initFull({
       chatflowid: '<chatflowid>',
       apiHost: 'http://localhost:3000',
-      theme: {
-        chatWindow: {
-          // height: 700, don't set height
-          // width: 400, don't set width
-        },
-      },
     });
   </script>
 </body>
+```
+
+#### Responsive height and width
+
+`height` and `width` accept a **number** (pixels) or a **CSS string**:
+
+| Value                         | Behaviour                                                                                                                                                                                     |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `height: 700`                 | Fixed 700px, automatically shrinks on smaller screens                                                                                                                                         |
+| `height: '700px'`             | Same as above via string                                                                                                                                                                      |
+| `height: '80dvh'`             | Responsive — 80% of viewport height on all screen sizes                                                                                                                                       |
+| `height: 'min(700px, 80dvh)'` | Caps at 700px on large screens, shrinks proportionally on small screens                                                                                                                       |
+| `height: '100%'`              | Relative to the `<flowise-fullchatbot>` host element — only works if the host has an explicit height set (e.g. via CSS). Use `'100dvh'` or omit `height` for full-viewport behaviour instead. |
+
+The same options apply to `width`.
+
+### Clear Chat
+
+```html
+<script type="module">
+  import Chatbot from 'https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js';
+  Chatbot.initFull({
+    chatflowid: '<chatflowid>',
+    apiHost: 'http://localhost:3000',
+    id: 'my-chatbot',
+  });
+</script>
+
+<!-- Call clearChat after the bot has mounted, e.g. from a button -->
+<button onclick="Chatbot.clearChat()">Clear All Chats</button>
+<button onclick="Chatbot.clearChat('my-chatbot')">Clear Specific Chat</button>
 ```
 
 ## Configuration
@@ -94,6 +119,7 @@ You can also customize chatbot with different configuration
   Chatbot.init({
     chatflowid: '91e9c803-5169-4db9-8207-3c0915d71c5f',
     apiHost: 'http://localhost:3000',
+    pageTitle: 'Flowise Chatbot Widget', // Optional: browser tab title. Empty string falls back to "Flowise Chatbot Widget"
     chatflowConfig: {
       // topK: 2
     },
@@ -162,14 +188,15 @@ You can also customize chatbot with different configuration
         errorMessage: 'This is a custom error message',
         backgroundColor: '#ffffff',
         backgroundImage: 'enter image path or link', // If set, this will overlap the background color of the chat window.
-        height: 700,
-        width: 400,
+        height: 700, // number (px) or CSS string e.g. '80dvh', 'min(700px, 80dvh)'
+        width: 400,  // number (px) or CSS string e.g. '400px', '50vw'
         fontSize: 16,
         starterPrompts: ['What is a bot?', 'Who are you?'], // It overrides the starter prompts set by the chat flow passed
         starterPromptFontSize: 15,
         clearChatOnReload: false, // If set to true, the chat will be cleared when the page reloads
         sourceDocsTitle: 'Sources:',
         renderHTML: true,
+        headerHtml: '<div style="padding: 10px; background: #f0f0f0;"><h3>My Custom Header</h3></div>', // Optional HTML rendered at the top of the chat window
         botMessage: {
           backgroundColor: '#f7f8ff',
           textColor: '#303235',
@@ -189,6 +216,7 @@ You can also customize chatbot with different configuration
           sendButtonColor: '#3B81F6',
           maxChars: 50,
           maxCharsWarningMessage: 'You exceeded the characters limit. Please input less than 50 characters.',
+          enableInputHistory: false,
           autoFocus: true, // If not used, autofocus is disabled on mobile and enabled on desktop. true enables it on both, false disables it on both.
           sendMessageSound: true,
           // sendSoundLocation: "send_message.mp3", // If this is not used, the default sound effect will be played if sendSoundMessage is true.

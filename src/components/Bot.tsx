@@ -45,6 +45,7 @@ import {
 } from '@/utils';
 import { FollowUpPromptBubble } from '@/components/bubbles/FollowUpPromptBubble';
 import { fetchEventSource, EventStreamContentType } from '@microsoft/fetch-event-source';
+import { CHAT_HEADER_HEIGHT } from '@/constants';
 
 export type FileEvent<T = EventTarget> = {
   target: T;
@@ -133,6 +134,9 @@ export type MessageType = {
   id?: string;
   followUpPrompts?: string;
   dateTime?: string;
+  thinking?: string;
+  thinkingDuration?: number;
+  isThinking?: boolean;
 };
 
 type IUploads = {
@@ -148,6 +152,7 @@ export type observersConfigType = Record<'observeUserInput' | 'observeLoading' |
 export type BotProps = {
   chatflowid: string;
   apiHost?: string;
+  pageTitle?: string;
   onRequest?: (request: RequestInit) => Promise<void>;
   chatflowConfig?: Record<string, unknown>;
   backgroundColor?: string;
@@ -181,6 +186,8 @@ export type BotProps = {
   dateTimeToggle?: DateTimeToggleTheme;
   renderHTML?: boolean;
   closeBot?: () => void;
+  hasCustomHeader?: boolean;
+  dialogContainer?: HTMLElement;
 };
 
 export type LeadsConfig = {
@@ -495,6 +502,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
   const [isLeadSaved, setIsLeadSaved] = createSignal(false);
   const [leadEmail, setLeadEmail] = createSignal('');
   const [disclaimerPopupOpen, setDisclaimerPopupOpen] = createSignal(false);
+  const [isThinking, setIsThinking] = createSignal(false);
 
   const [openFeedbackDialog, setOpenFeedbackDialog] = createSignal(false);
   const [feedback, setFeedback] = createSignal('');
@@ -585,6 +593,19 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     };
     chatContainer?.addEventListener('scroll', handleScroll, { passive: true });
     onCleanup(() => chatContainer?.removeEventListener('scroll', handleScroll));
+
+    const handleExternalClearChat = async (e: Event) => {
+      const targetId = (e as CustomEvent).detail?.id;
+      if (targetId) {
+        const root = chatContainer?.getRootNode();
+        const hostEl = root instanceof ShadowRoot ? root.host : chatContainer?.closest(`#${CSS.escape(targetId)}`);
+        if (!hostEl || hostEl.id !== targetId) return;
+      }
+      if (loading()) await handleAbort();
+      clearChat();
+    };
+    document.addEventListener('flowise-clear-chat', handleExternalClearChat);
+    onCleanup(() => document.removeEventListener('flowise-clear-chat', handleExternalClearChat));
 
     // Expose programmatic scroll guard to outer scope
     let guardTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -788,6 +809,41 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     });
   };
 
+  const handleThinkingEvent = (data: string, duration?: number) => {
+    if (data && duration === undefined) {
+      setIsThinking(true);
+      setMessages((prevMessages) => {
+        const lastMsg = prevMessages[prevMessages.length - 1];
+        if (lastMsg.type === 'userMessage') return prevMessages;
+        const allMessages = [...prevMessages.slice(0, -1), { ...lastMsg, thinking: (lastMsg.thinking || '') + data, isThinking: true }];
+        addChatMessage(allMessages);
+        return allMessages;
+      });
+    } else if (data === '' && duration !== undefined) {
+      setIsThinking(false);
+      setMessages((prevMessages) => {
+        const lastMsg = prevMessages[prevMessages.length - 1];
+        if (lastMsg.type === 'userMessage') return prevMessages;
+        const allMessages = [...prevMessages.slice(0, -1), { ...lastMsg, thinkingDuration: duration, isThinking: false }];
+        addChatMessage(allMessages);
+        return allMessages;
+      });
+    }
+  };
+
+  const finalizeThinking = () => {
+    if (isThinking()) {
+      setIsThinking(false);
+      setMessages((prevMessages) => {
+        const lastMsg = prevMessages[prevMessages.length - 1];
+        if (lastMsg.type === 'userMessage') return prevMessages;
+        const allMessages = [...prevMessages.slice(0, -1), { ...lastMsg, isThinking: false }];
+        addChatMessage(allMessages);
+        return allMessages;
+      });
+    }
+  };
+
   const clearPreviews = () => {
     // Revoke the data uris to avoid memory leaks
     previews().forEach((file) => URL.revokeObjectURL(file.preview));
@@ -918,6 +974,9 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
           case 'agentReasoning':
             updateLastMessageAgentReasoning(payload.data);
             break;
+          case 'thinking':
+            handleThinkingEvent(payload.data, payload.duration);
+            break;
           case 'agentFlowEvent':
             updateAgentFlowEvent(payload.data);
             break;
@@ -941,6 +1000,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
             closeResponse();
             break;
           case 'end':
+            finalizeThinking();
             setLocalStorageChatflow(chatflowid, chatId);
             closeResponse();
             break;
@@ -1145,7 +1205,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
       chatId: chatId(),
     };
 
-    if (startInputType() === 'formInput') {
+    if (startInputType() === 'formInput' && Object.keys(formData).length > 0) {
       body.form = formData;
       delete body.question;
     }
@@ -1193,6 +1253,8 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
             agentFlowExecutedData: data?.agentFlowExecutedData,
             action: data?.action,
             artifacts: data?.artifacts,
+            thinking: data?.reasonContent?.thinking,
+            thinkingDuration: data?.reasonContent?.thinkingDuration,
             type: 'apiMessage' as messageType,
             feedback: null,
             dateTime: new Date().toISOString(),
@@ -1314,9 +1376,9 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
         messages.push({ message: '', type: 'leadCaptureMessage' });
       }
       setMessages(messages);
+      setShowScrollButton(false);
     } catch (error: any) {
-      const errorData = error.response.data || `${error.response.status}: ${error.response.statusText}`;
-      console.error(`error: ${errorData}`);
+      console.error('clearChat failed:', error);
     }
   };
 
@@ -1324,9 +1386,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     if (props.clearChatOnReload) {
       clearChat();
       window.addEventListener('beforeunload', clearChat);
-      return () => {
-        window.removeEventListener('beforeunload', clearChat);
-      };
+      onCleanup(() => window.removeEventListener('beforeunload', clearChat));
     }
   });
 
@@ -1397,6 +1457,12 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
               if (message.fileAnnotations) chatHistory.fileAnnotations = message.fileAnnotations;
               if (message.fileUploads) chatHistory.fileUploads = message.fileUploads;
               if (message.agentReasoning) chatHistory.agentReasoning = message.agentReasoning;
+              if ((message as any).reasonContent && typeof (message as any).reasonContent === 'object') {
+                chatHistory.thinking = (message as any).reasonContent.thinking;
+                chatHistory.thinkingDuration = (message as any).reasonContent.thinkingDuration;
+              }
+              if (message.thinking) chatHistory.thinking = message.thinking;
+              if (message.thinkingDuration !== undefined) chatHistory.thinkingDuration = message.thinkingDuration;
               if (message.action) chatHistory.action = message.action;
               if (message.artifacts) chatHistory.artifacts = message.artifacts;
               if (message.followUpPrompts) chatHistory.followUpPrompts = message.followUpPrompts;
@@ -2463,12 +2529,12 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
 
           {props.showTitle ? (
             <div
-              class="flex flex-row items-center w-full h-[50px] absolute top-0 left-0 z-10"
+              class={`flex flex-row items-center w-full h-[${CHAT_HEADER_HEIGHT}px] absolute top-0 left-0 z-10`}
               style={{
                 background: props.titleBackgroundColor || props.bubbleBackgroundColor || defaultTitleBackgroundColor,
                 color: props.titleTextColor || props.bubbleTextColor || defaultBackgroundColor,
-                'border-top-left-radius': props.isFullPage ? '0px' : '6px',
-                'border-top-right-radius': props.isFullPage ? '0px' : '6px',
+                'border-top-left-radius': props.isFullPage || props.hasCustomHeader ? '0px' : '6px',
+                'border-top-right-radius': props.isFullPage || props.hasCustomHeader ? '0px' : '6px',
               }}
             >
               <Show when={props.titleAvatarSrc}>
@@ -2492,7 +2558,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
               </DeleteButton>
             </div>
           ) : null}
-          <div class="relative flex flex-col w-full h-full justify-start z-0">
+          <div class="relative flex flex-col w-full flex-1 min-h-0 justify-start z-0">
             <div
               ref={chatContainer}
               class="overflow-y-scroll flex flex-col flex-grow min-w-full w-full px-3 pt-[70px] relative scrollable-container chatbot-chat-view"
@@ -2544,6 +2610,8 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                           isTTSPlaying={isTTSPlaying()}
                           handleTTSClick={handleTTSClick}
                           handleTTSStop={handleTTSStop}
+                          hasCustomHeader={props.hasCustomHeader}
+                          dialogContainer={props.dialogContainer}
                         />
                       )}
                       {message.type === 'leadCaptureMessage' && leadsConfig()?.status && !getLocalStorageChatflow(props.chatflowid)?.lead && (
@@ -2699,7 +2767,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                   handleFileChange={handleFileChange}
                   sendMessageSound={props.textInput?.sendMessageSound}
                   sendSoundLocation={props.textInput?.sendSoundLocation}
-                  enableInputHistory={true}
+                  enableInputHistory={props.textInput?.enableInputHistory ?? true}
                   maxHistorySize={10}
                   isLoading={loading()}
                   showAbortButton={loading() && hasAgentFlowExecutedData()}
